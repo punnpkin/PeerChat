@@ -188,7 +188,11 @@ async def ws_handler(websocket):
     active_connections += 1
     log.info("新连接来自 %s（当前活跃连接 %d）", websocket.remote_address, active_connections)
     try:
-        async for message in websocket:
+        while True:
+            try:
+                message = await websocket.recv()
+            except Exception:
+                break
             await handle_message(websocket, message)
     finally:
         await cleanup(websocket)
@@ -261,6 +265,11 @@ async def main():
     hb_task = asyncio.create_task(_heartbeat())
 
     log.info("PeerChat 服务启动: http://%s:%d", host, port)
+    if not (STATIC_DIR / "tailwind.js").is_file():
+        log.warning(
+            "未找到 static/tailwind.js — 浏览器将从 CDN 加载 Tailwind。"
+            " 内网部署请先执行: python download_tailwind.py"
+        )
 
     async with websockets.serve(
         ws_handler, host, port, process_request=http_handler

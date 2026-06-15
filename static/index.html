@@ -4,31 +4,50 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>PeerChat · 局域网 P2P 聊天</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 1) 先静态加载本地 tailwind.js（浏览器会按顺序执行，不会抢跑） -->
+  <script src="/tailwind.js"></script>
+  <!-- 2) 如果 tailwind.js 没有加载成功（服务器 404，例如未执行 download_tailwind.py），
+         再动态注入 CDN 脚本 -->
   <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            brand: {
-              50: '#f5f7ff',
-              100: '#eaeffe',
-              200: '#cdd6fc',
-              300: '#a8b6f8',
-              400: '#7e92f2',
-              500: '#5b6fe8',
-              600: '#4855d1',
-              700: '#3b46ab',
-              800: '#333b87',
-              900: '#2d3369',
+    (function () {
+      if (typeof tailwind !== 'undefined') return;
+      var s = document.createElement('script');
+      s.src = 'https://cdn.tailwindcss.com';
+      s.onload = function () { window.__tailwindFromCdn = true; window.__applyTailwindConfig && window.__applyTailwindConfig(); };
+      s.onerror = function () { console.error('Tailwind CDN 也加载失败，请检查网络或执行 python download_tailwind.py'); };
+      document.head.appendChild(s);
+    })();
+  </script>
+  <!-- 3) 配置 tailwind。放到就绪后再设置，避免脚本没加载完就访问 tailwind 变量 -->
+  <script>
+    function __applyTailwindConfig() {
+      if (typeof tailwind === 'undefined') return setTimeout(__applyTailwindConfig, 30);
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                50: '#f5f7ff',
+                100: '#eaeffe',
+                200: '#cdd6fc',
+                300: '#a8b6f8',
+                400: '#7e92f2',
+                500: '#5b6fe8',
+                600: '#4855d1',
+                700: '#3b46ab',
+                800: '#333b87',
+                900: '#2d3369',
+              },
+            },
+            boxShadow: {
+              'soft': '0 1px 3px 0 rgba(0,0,0,0.05), 0 1px 2px 0 rgba(0,0,0,0.03)',
             },
           },
-          boxShadow: {
-            'soft': '0 1px 3px 0 rgba(0,0,0,0.05), 0 1px 2px 0 rgba(0,0,0,0.03)',
-          },
         },
-      },
-    };
+      };
+    }
+    window.__applyTailwindConfig = __applyTailwindConfig;
+    __applyTailwindConfig();
   </script>
   <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%234855d1'/><text x='50%25' y='54%25' font-family='Arial,sans-serif' font-size='36' font-weight='700' fill='white' text-anchor='middle'>P</text></svg>" />
   <style>
