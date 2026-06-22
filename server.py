@@ -49,6 +49,14 @@ async def handle_message(websocket, message):
         }
         websocket.room_code = code
         log.info("用户 %r 创建了会话 %s（当前活跃房间 %d）", nickname, code, len(rooms))
+        # 从 WebSocket 连接读取客户端的真实 IP（用于前端重写 Chrome 产生的 .local 伪地址）
+        client_ip = ""
+        try:
+            ra = websocket.remote_address
+            if ra:
+                client_ip = ra[0] if isinstance(ra, tuple) else str(ra)
+        except Exception:
+            pass
         await websocket.send(
             json.dumps(
                 {
@@ -56,6 +64,7 @@ async def handle_message(websocket, message):
                     "room_code": code,
                     "nickname": nickname,
                     "is_initiator": True,
+                    "client_ip": client_ip,
                 }
             )
         )
@@ -84,6 +93,23 @@ async def handle_message(websocket, message):
         room["clients"].append(websocket)
         room["nicknames"].append(nickname)
 
+        # 读取加入方的真实 IP
+        join_ip = ""
+        try:
+            ra = websocket.remote_address
+            if ra:
+                join_ip = ra[0] if isinstance(ra, tuple) else str(ra)
+        except Exception:
+            pass
+        # 读取发起方的真实 IP
+        init_ip = ""
+        try:
+            ra = existing_ws.remote_address
+            if ra:
+                init_ip = ra[0] if isinstance(ra, tuple) else str(ra)
+        except Exception:
+            pass
+
         log.info("用户 %r 加入会话 %s（与 %r 配对）", nickname, code, existing_nick)
         await websocket.send(
             json.dumps(
@@ -93,6 +119,8 @@ async def handle_message(websocket, message):
                     "peer_nickname": existing_nick,
                     "nickname": nickname,
                     "is_initiator": False,
+                    "client_ip": join_ip,
+                    "peer_ip": init_ip,
                 }
             )
         )
@@ -102,6 +130,8 @@ async def handle_message(websocket, message):
                     "type": "peer_joined",
                     "peer_nickname": nickname,
                     "room_code": code,
+                    "client_ip": init_ip,
+                    "peer_ip": join_ip,
                 }
             )
         )

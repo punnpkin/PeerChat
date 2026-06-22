@@ -144,6 +144,7 @@
     if (type === 'room_created') {
       state.roomCode = msg.room_code;
       state.isInitiator = true;  // room creator = offerer
+      state.clientIP = msg.client_ip || '';   // 服务器视角下的客户端真实 IP，用于重写 .local
       enterChatView();
       UI.setStatus('waiting');
       UI.setHeaderWaiting('等待对方连接...');
@@ -154,6 +155,7 @@
       state.roomCode = msg.room_code;
       state.isInitiator = false; // joiner = answerer
       state.peerNickname = msg.peer_nickname || '对方';
+      state.clientIP = msg.client_ip || '';   // 服务器视角下的客户端真实 IP，用于重写 .local
       enterChatView();
       UI.setStatus('waiting');
       UI.setHeaderConnected(`对方: ${state.peerNickname}`);
@@ -162,6 +164,7 @@
       WebRTC.startPeerConnection(false);
     } else if (type === 'peer_joined') {
       state.peerNickname = msg.peer_nickname || '对方';
+      if (msg.client_ip) state.clientIP = msg.client_ip;  // 服务器视角下的客户端真实 IP
       UI.setStatus('waiting');
       UI.setHeaderConnected(`对方: ${state.peerNickname}`);
       UI.appendSystem(`${state.peerNickname} 已加入，正在建立 P2P 连接...`);

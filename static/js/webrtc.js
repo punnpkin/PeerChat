@@ -82,8 +82,16 @@
   }
 
   // ---------- mDNS 地址重写（Chrome 把 IP 藏成 xxx.local 时的兜底） ----------
-  // 从 window.location.hostname 推断本机真实 IP（例如用户用 http://40.129.39.20:8000 访问时）
+  // 优先用服务器返回的 client_ip（服务器视角下的客户端真实 IP，跨子网/远端服务器部署时必需）
+  // 回退方案：从 window.location.hostname 推断（本机调试时，服务器在本机时有效）
   function detectRealIP() {
+    // 1) 服务器返回的客户端真实 IP（最可靠，跨子网必需）
+    const ipFromServer = state.clientIP;
+    if (ipFromServer && ipFromServer !== 'localhost' && ipFromServer !== '127.0.0.1' &&
+        ipFromServer.indexOf(':') === -1 && /^\d+\.\d+\.\d+\.\d+$/.test(ipFromServer)) {
+      return ipFromServer;
+    }
+    // 2) 回退：从 URL 推断（服务器跑在本机上，或同网段能直连时）
     let ip = window.location.hostname || '';
     if (ip && ip !== 'localhost' && ip !== '127.0.0.1' && ip.indexOf(':') === -1 && /^\d+\.\d+\.\d+\.\d+$/.test(ip)) {
       return ip;

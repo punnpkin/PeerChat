@@ -10,6 +10,7 @@
     peerNickname: '',
     isInitiator: false,   // who created the room = the offerer
     leaving: false,       // set when the user intentionally leaves
+    clientIP: '',         // 服务器视角下客户端的真实 IP，用于 SDP 中 .local 重写
     pc: null,
     dataChannel: null,
     connected: false,
