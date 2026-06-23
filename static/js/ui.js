@@ -23,6 +23,62 @@
   const MAX_LINES_PER_MSG = 5; // single message > N lines forces a "sub-split" (still in one bubble but visually distinct)
   let lastGroup = null; // { senderKey: 'me' | 'peer:<nick>', countInGroup, containerEl, firstTs }
 
+  // ---- Tab 未读消息标题闪烁 ----
+  let baseTitle = document.title || 'PeerChat';   // 页面原始标题，用于切回 tab 后恢复
+  let unreadCount = 0;                             // 切换到后台后收到的新消息数
+  function updateTitle() {
+    if (unreadCount > 0) {
+      document.title = `（${unreadCount} 条新消息）${baseTitle}`;
+    } else {
+      document.title = baseTitle;
+    }
+  }
+  function notifyIncoming() {
+    // 仅当用户不在当前 tab 时才累加未读数，避免聊天时也改标题
+    if (document.hidden || document.visibilityState === 'hidden') {
+      unreadCount++;
+      updateTitle();
+    }
+  }
+  function initTabNotification() {
+    baseTitle = document.title || 'PeerChat';
+    // 用户切回 tab 时清空未读，恢复原始标题
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        unreadCount = 0;
+        updateTitle();
+      }
+    });
+  }
+
+  // ---- Tab 未读消息标题闪烁 ----
+  let baseTitle = document.title || 'PeerChat';   // 页面原始标题，用于切回 tab 后恢复
+  let unreadCount = 0;                             // 切换到后台后收到的新消息数
+  function updateTitle() {
+    if (unreadCount > 0) {
+      document.title = `（${unreadCount} 条新消息）${baseTitle}`;
+    } else {
+      document.title = baseTitle;
+    }
+  }
+  function notifyIncoming() {
+    // 仅当用户不在当前 tab 时才累加未读数，避免聊天时也改标题
+    if (document.hidden || document.visibilityState === 'hidden') {
+      unreadCount++;
+      updateTitle();
+    }
+  }
+  function initTabNotification() {
+    baseTitle = document.title || 'PeerChat';
+    // 用户切回 tab 时清空未读，恢复原始标题
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        unreadCount = 0;
+        updateTitle();
+      }
+    });
+  }
+
   function cacheDOM() {
     els.statusDot = document.getElementById('status-dot');
     els.statusText = document.getElementById('status-text');
@@ -282,6 +338,7 @@
     const { msgContainer, isNewGroup } = ensureMessageTarget(fromMe, nickname, ts);
     insertTextContent(msgContainer, text);
     maybeScrollToBottom();
+    if (!fromMe) notifyIncoming();  // 对方发来的消息 → 如果在后台就改标题
     return { isNewGroup };
   }
 
@@ -290,6 +347,8 @@
   function appendFilePlaceholder({ fromMe, name, size, isImage, nickname, ts }) {
     // Build target just like text messages
     const { msgContainer } = ensureMessageTarget(fromMe, nickname || (fromMe ? '我' : state.peerNickname), ts);
+    if (!fromMe) notifyIncoming();  // 对方发来的文件/图片 → 如果在后台就改标题
+    if (!fromMe) notifyIncoming();  // 对方发来的文件/图片 → 如果在后台就改标题
 
     const wrap = document.createElement('div');
     wrap.className = 'msg-body msg-file';
@@ -440,8 +499,20 @@
     lastGroup = null;
   }
 
+  // 初始化 Tab 通知模块（绑定 visibilitychange 监听）
+  function initTabNotificationAPI() {
+    initTabNotification();
+  }
+
+  // 初始化 Tab 通知模块（绑定 visibilitychange 监听）
+  function initTabNotificationAPI() {
+    initTabNotification();
+  }
+
   window.PeerChat.UI = {
     cacheDOM,
+    initTabNotification: initTabNotificationAPI,
+    initTabNotification: initTabNotificationAPI,
     setStatus,
     setHeaderConnected,
     setHeaderWaiting,

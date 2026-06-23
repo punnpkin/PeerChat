@@ -17,9 +17,10 @@
   Signal.initEntryCode();
   Signal.initEntryEvents();
 
-  // ---- UI bindings: scroll, image modal ----
+  // ---- UI bindings: scroll, image modal, tab title notification ----
   UI.bindScroll();
   UI.bindImgModal();
+  UI.initTabNotification();
 
   // ---- Chat input (textarea auto-size + Enter to send) ----
   const chatInput = document.getElementById('chat-input');
