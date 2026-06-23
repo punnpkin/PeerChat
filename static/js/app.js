@@ -33,6 +33,25 @@
 
   chatInput.addEventListener('input', autosize);
 
+  // ---- Paste image: Ctrl+V 粘贴剪贴板中的图片/文件
+  chatInput.addEventListener('paste', async (e) => {
+    if (!e.clipboardData) return;
+    const items = e.clipboardData.items;
+    if (!items) return;
+    const files = [];
+    for (const item of items) {
+      if (item.kind === 'file' && item.type && item.type.indexOf('image/') === 0) {
+        const f = item.getAsFile();
+        if (f) files.push(f);
+      }
+    }
+    if (files.length) {
+      e.preventDefault();   // 阻止把图片转成文本塞进 textarea
+      await FileMod.sendFiles(files);
+    }
+    // 非图片内容（纯文本）走浏览器默认粘贴行为
+  });
+
   function trySendFromInput() {
     const text = chatInput.value;
     if (!text.trim()) return;
