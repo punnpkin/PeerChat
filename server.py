@@ -4,6 +4,7 @@ import logging
 import os
 import random
 import signal
+import socket
 import websockets
 from http import HTTPStatus
 from pathlib import Path
@@ -28,6 +29,43 @@ def generate_room_code():
         code = "".join(str(random.randint(0, 9)) for _ in range(8))
         if code not in rooms:
             return code
+
+
+def enumerate_local_ips():
+    """返回本机所有非 loopback 的 IPv4 地址列表，用于启动时打印访问链接。"""
+    ips = []
+    # 方案一：gethostbyname_ex — 大多数系统上能拿到分配的网卡 IP
+    try:
+        _, _, addrs = socket.gethostbyname_ex(socket.gethostname())
+        for a in addrs:
+            if a and a.startswith("127.") is False and a not in ips:
+                ips.append(a)
+    except (socket.gaierror, socket.herror):
+        pass
+    # 方案二：建一个 UDP socket（不发包），从 getsockname 取路由优先级最高的 IP
+    if not ips:
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            try:
+                s.connect(("8.8.8.8", 80))
+                ip = s.getsockname()[0]
+                if ip and not ip.startswith("127.") and ip not in ips:
+                    ips.append(ip)
+            finally:
+                s.close()
+        except OSError:
+            pass
+    # 方案三：如果以上失败，尝试更通用的 getaddrinfo 枚举
+    if not ips:
+        try:
+            for family, _, _, _, sockaddr in socket.getaddrinfo(socket.gethostname(), None):
+                if family == socket.AF_INET:
+                    ip = sockaddr[0]
+                    if ip and not ip.startswith("127.") and ip not in ips:
+                        ips.append(ip)
+        except (socket.gaierror, socket.herror, OSError):
+            pass
+    return ips
 
 
 async def handle_message(websocket, message):
@@ -295,6 +333,13 @@ async def main():
     hb_task = asyncio.create_task(_heartbeat())
 
     log.info("PeerChat 服务启动: http://%s:%d", host, port)
+    local_ips = enumerate_local_ips()
+    if local_ips:
+        log.info("本机可用的访问链接（任选其一复制到浏览器）：")
+        for ip in local_ips:
+            log.info("    http://%s:%d", ip, port)
+    else:
+        log.info("无法自动枚举本机 IP，可尝试 http://<本机局域网IP>:%d 访问", port)
     if not (STATIC_DIR / "tailwind.js").is_file():
         log.warning(
             "未找到 static/tailwind.js — 浏览器将从 CDN 加载 Tailwind。"
