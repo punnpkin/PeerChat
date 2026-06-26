@@ -74,12 +74,14 @@
       50% { opacity: .5; }
     }
     /* Custom scrollbar */
-    .chat-scroll::-webkit-scrollbar { width: 8px; }
+    .chat-scroll::-webkit-scrollbar { width: 4px; }
     .chat-scroll::-webkit-scrollbar-track { background: transparent; }
     .chat-scroll::-webkit-scrollbar-thumb {
-      background: rgba(0,0,0,0.12); border-radius: 8px;
+      border: 4px solid transparent;
+      background-clip: content-box;
+      background: rgba(0,0,0,0.08); border-radius: 8px;
     }
-    .chat-scroll::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.2); }
+    .chat-scroll::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.15); }
     /* Textarea no-resize handle */
     textarea.chat-input {
       resize: none;
