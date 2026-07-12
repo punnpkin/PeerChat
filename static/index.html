@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PeerChat · 局域网 P2P 聊天</title>
+  <!-- 1) 先静态加载本地 tailwind.js（浏览器会按顺序执行，不会抢跑） -->
+  <script src="/tailwind.js"></script>
+  <!-- 2) 如果 tailwind.js 没有加载成功（服务器 404，例如未执行 download_tailwind.py），
+         再动态注入 CDN 脚本 -->
+  <script>
+    (function () {
+      if (typeof tailwind !== 'undefined') return;
+      var s = document.createElement('script');
+      s.src = 'https://cdn.tailwindcss.com';
+      s.onload = function () { window.__tailwindFromCdn = true; window.__applyTailwindConfig && window.__applyTailwindConfig(); };
+      s.onerror = function () { console.error('Tailwind CDN 也加载失败，请检查网络或执行 python download_tailwind.py'); };
+      document.head.appendChild(s);
+    })();
+  </script>
+  <!-- 3) 配置 tailwind。放到就绪后再设置，避免脚本没加载完就访问 tailwind 变量 -->
+  <script>
+    function __applyTailwindConfig() {
+      if (typeof tailwind === 'undefined') return setTimeout(__applyTailwindConfig, 30);
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                50: '#f5f7ff',
+                100: '#eaeffe',
+                200: '#cdd6fc',
+                300: '#a8b6f8',
+                400: '#7e92f2',
+                500: '#5b6fe8',
+                600: '#4855d1',
+                700: '#3b46ab',
+                800: '#333b87',
+                900: '#2d3369',
+              },
+            },
+            boxShadow: {
+              'soft': '0 1px 3px 0 rgba(0,0,0,0.05), 0 1px 2px 0 rgba(0,0,0,0.03)',
+            },
+          },
+        },
+      };
+    }
+    window.__applyTailwindConfig = __applyTailwindConfig;
+    __applyTailwindConfig();
+  </script>
+  <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%234855d1'/><text x='50%25' y='54%25' font-family='Arial,sans-serif' font-size='36' font-weight='700' fill='white' text-anchor='middle'>P</text></svg>" />
+  <style>
+    html, body { height: 100%; }
+    body {
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: #f7f8fb;
+    }
+    .fade-in { animation: fadeIn .25s ease-out both; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .toast-in { animation: toastIn .3s ease-out both; }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .pulse-dot {
+      animation: pulseDot 1.8s ease-in-out infinite;
+    }
+    @keyframes pulseDot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: .5; }
+    }
+    /* Custom scrollbar */
+    .chat-scroll::-webkit-scrollbar { width: 8px; }
+    .chat-scroll::-webkit-scrollbar-track { background: transparent; }
+    .chat-scroll::-webkit-scrollbar-thumb {
+      background: rgba(0,0,0,0.12); border-radius: 8px;
+    }
+    .chat-scroll::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.2); }
+    /* Textarea no-resize handle */
+    textarea.chat-input {
+      resize: none;
+      line-height: 1.5;
+    }
+    .msg-img:hover { outline: 2px solid rgba(91,111,232,.4); }
+
+    /* ============ Timeline styles ============ */
+    /* Group spacing: larger between different groups, smaller between messages inside */
+    #messages > .timeline-group,
+    #messages > .flex.justify-center { margin-top: 1rem; }
+    #messages > .timeline-group:first-child { margin-top: 0; }
+
+    /* Message container — spacing between *separate* messages within the same group */
+    .msg-container > .msg-body + .msg-body { margin-top: 0.35rem; }
+
+    /* Single message body — keeps its own newlines, tight line-height, wraps */
+    .msg-body {
+      font-size: 0.875rem;
+      line-height: 1.55;
+      color: #1f2937;
+      white-space: normal;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+
+    /* Long message chunk: slightly larger top padding to show it's a "sub-split" */
+    .msg-body.msg-body-split {
+      margin-top: 0.55rem !important;
+      border-top: 1px dashed transparent;
+      padding-top: 0.35rem;
+    }
+
+    /* File cards inside timeline — same text baseline */
+    .msg-body.msg-file { color: #475569; }
+
+    /* Image inside timeline: small gap above */
+    .msg-body img.msg-img {
+      display: block;
+      margin-top: 0.25rem;
+    }
+
+    /* Subtle fade-in for new messages */
+    .timeline-group { animation: fadeIn .25s ease-out both; }
+  </style>
+</head>
+<body class="text-slate-800 antialiased">
+
+  <!-- ========== 入口页面 ========== -->
+  <section id="entry-view" class="min-h-full flex flex-col items-center justify-center px-4 py-10">
+    <div class="w-full max-w-md mx-auto fade-in">
+      <div class="flex flex-col items-center text-center mb-8">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-brand-600 shadow-soft mb-4">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" class="w-10 h-10" aria-hidden="true">
+            <rect x="6" y="6" width="36" height="30" rx="7" fill="#fff"/>
+            <path d="M14 42 L22 34 H32 Q38 34 38 28 V13 Q38 8 32 8 H16 Q10 8 10 13 V25 Q10 30 16 30 H20 L22 34 Z" fill="none" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/>
+            <text x="24" y="28" font-family="Arial,sans-serif" font-size="14" font-weight="800" text-anchor="middle" fill="#4855d1">P</text>
+          </svg>
+        </div>
+        <h1 class="text-3xl font-bold tracking-tight text-slate-900">PeerChat</h1>
+        <p class="text-sm text-slate-500 mt-2">局域网点对点聊天 · 无需账号 · 端到端直连</p>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-soft border border-slate-100 p-6">
+        <label class="block text-sm font-medium text-slate-700 mb-2">你的昵称</label>
+        <div class="relative">
+          <input
+            id="entry-nickname"
+            type="text"
+            maxlength="24"
+            placeholder="输入你的昵称"
+            class="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200 placeholder:text-slate-400"
+          />
+          <button id="btn-refresh-nick" type="button" class="hidden absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-brand-600 text-xs px-2 py-1 rounded-md hover:bg-slate-100 transition" title="换一个">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15A9 9 0 0 1 5.64 18.36L1 14"/></svg>
+          </button>
+        </div>
+
+        <div class="mt-6 grid grid-cols-1 gap-5">
+          <!-- 创建会话 -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-medium text-slate-700">创建新会话</span>
+              <span class="text-xs text-slate-400">生成 8 位会话码</span>
+            </div>
+            <button id="btn-create" class="w-full inline-flex items-center justify-center rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-4 py-2.5 shadow-soft transition">
+              <svg class="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>
+              创建会话并进入
+            </button>
+          </div>
+
+          <div class="relative flex items-center">
+            <div class="flex-grow border-t border-slate-200"></div>
+            <span class="flex-shrink mx-3 text-xs text-slate-400">或</span>
+            <div class="flex-grow border-t border-slate-200"></div>
+          </div>
+
+          <!-- 加入会话 -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-medium text-slate-700">加入已有会话</span>
+              <span class="text-xs text-slate-400">8 位数字</span>
+            </div>
+            <div class="flex gap-2">
+              <input
+                id="entry-code"
+                inputmode="numeric"
+                pattern="[0-9]*"
+                maxlength="8"
+                placeholder="输入 8 位会话码"
+                class="flex-1 rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm tracking-[0.25em] font-medium text-slate-800 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+              />
+              <button id="btn-join" class="inline-flex items-center justify-center rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-sm font-medium px-5 py-2.5 shadow-soft transition">
+                加入
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div id="entry-error" class="hidden mt-4 rounded-lg bg-red-50 border border-red-100 text-red-700 text-sm px-3.5 py-2.5"></div>
+      </div>
+
+      <p class="text-center text-xs text-slate-400 mt-6">
+        信令通过本地 WebSocket 交换，消息与文件经 WebRTC 直连传输。
+      </p>
+    </div>
+  </section>
+
+  <!-- ========== 聊天界面 ========== -->
+  <section id="chat-view" class="hidden h-screen flex flex-col bg-slate-50">
+    <!-- Header -->
+    <header class="border-b border-slate-200 bg-white/80 backdrop-blur">
+      <div class="max-w-5xl w-full mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center text-white font-bold text-sm shadow-soft">P</div>
+          <span class="font-semibold text-slate-800 hidden sm:inline">PeerChat</span>
+        </div>
+
+        <div class="h-5 w-px bg-slate-200 hidden sm:block"></div>
+
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-slate-500">会话码</span>
+          <button id="header-room-code" class="group inline-flex items-center gap-1.5 rounded-md px-2 py-1 font-mono text-sm text-slate-900 hover:bg-brand-50 hover:text-brand-700 transition" title="点击复制">
+            <span id="room-code-text">--------</span>
+            <svg class="w-3.5 h-3.5 text-slate-400 group-hover:text-brand-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+          </button>
+          <span class="hidden sm:inline text-slate-300">·</span>
+          <span id="peer-name-label" class="text-sm text-slate-500 truncate">等待对方连接...</span>
+        </div>
+
+        <div class="flex-1"></div>
+
+        <div class="flex items-center gap-2">
+          <div id="status-indicator" class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+            <span id="status-dot" class="inline-block w-2 h-2 rounded-full bg-slate-400"></span>
+            <span id="status-text">未连接</span>
+          </div>
+          <button id="btn-share" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-sm px-2.5 py-1.5 transition" title="分享链接">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg>
+            <span class="hidden sm:inline">分享</span>
+          </button>
+          <button id="btn-leave" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white hover:bg-red-50 hover:border-red-200 text-slate-700 hover:text-red-700 text-sm px-2.5 py-1.5 transition" title="离开会话">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            <span class="hidden sm:inline">离开</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Messages -->
+    <main class="flex-1 overflow-hidden">
+      <div id="messages" class="max-w-5xl w-full mx-auto h-full overflow-y-auto chat-scroll px-4 py-6">
+        <!-- messages injected here -->
+      </div>
+    </main>
+
+    <!-- New message indicator -->
+    <div id="new-msg-bar" class="hidden fixed bottom-24 left-1/2 -translate-x-1/2 z-20">
+      <button class="bg-brand-600 text-white text-xs font-medium rounded-full px-4 py-1.5 shadow-md hover:bg-brand-700 transition" onclick="scrollToBottom(true)">
+        <span class="inline-flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          有新消息
+        </span>
+      </button>
+    </div>
+
+    <!-- Input -->
+    <footer class="border-t border-slate-200 bg-white">
+      <div class="max-w-5xl w-full mx-auto px-4 py-3">
+        <div class="flex items-end gap-2 rounded-2xl border border-slate-200 bg-slate-50 focus-within:border-brand-400 focus-within:bg-white focus-within:ring-2 focus-within:ring-brand-100 transition p-2">
+          <label class="cursor-pointer inline-flex items-center justify-center w-9 h-9 rounded-xl text-slate-500 hover:text-brand-700 hover:bg-white transition" title="发送文件或图片">
+            <input id="file-input" type="file" class="hidden" />
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+          </label>
+          <textarea
+            id="chat-input"
+            rows="1"
+            placeholder="输入消息... (Enter 发送, Shift+Enter 换行)"
+            class="chat-input flex-1 bg-transparent px-2 py-1.5 text-sm focus:outline-none"
+          ></textarea>
+          <button id="btn-send" class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-brand-600 hover:bg-brand-700 text-white transition disabled:bg-slate-300 disabled:cursor-not-allowed" disabled>
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+      </div>
+    </footer>
+  </section>
+
+  <!-- Image modal -->
+  <div id="img-modal" class="hidden fixed inset-0 z-40 bg-black/70 flex items-center justify-center p-4" onclick="closeImgModal()">
+    <img id="img-modal-img" class="max-w-full max-h-full rounded-lg shadow-xl" />
+  </div>
+
+  <!-- Toast container -->
+  <div id="toasts" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 pointer-events-none"></div>
+
+  <script src="js/utils.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/webrtc.js"></script>
+  <script src="js/file.js"></script>
+  <script src="js/signal.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
