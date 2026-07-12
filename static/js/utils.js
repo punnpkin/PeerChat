@@ -16,11 +16,7 @@
     autoScroll: true,
     receivingFile: null,
     sendingFiles: new Map(),
-<<<<<<< HEAD
     CHUNK_SIZE: 256 * 1024,
-=======
-    CHUNK_SIZE: 16 * 1024,
->>>>>>> 8f764e5555d5eaa95a43d9aa2417c58949ed2b1d
   };
 
   function escapeHtml(s) {
@@ -57,7 +53,7 @@
   }
 
   // Generate neutral grey-style nickname like "访客_a1b2c"
-  const ADJECTIVES = ['快乐的', '安静的', '友好的', '好奇的', '悠闲的', '温和的', '机智的', '活泼的', '沉稳的', '闪亮的', '灵动的', '热情的'];
+  const ADJECTIVES = ['快乐的', '安静的', '友好的', '好奇的', '悠闲的', '温和的', '机智的', '活泼的', '沉稳的', '闪亮的', '可爱的', '热情的'];
   const ANIMALS = ['小熊', '海豚', '麻雀', '狐狸', '兔子', '松鼠', '企鹅', '小鹿', '小猫', '考拉', '柴犬', '水獭'];
 
   function randomNickname() {

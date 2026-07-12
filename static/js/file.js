@@ -62,7 +62,6 @@
       try { dc.send(JSON.stringify(meta)); } catch { resolve(); return; }
 
       let offset = 0;
-<<<<<<< HEAD
       let readerIdx = 0;
       const readers = [new FileReader(), new FileReader()];
       let pendingBuf = null;
@@ -73,14 +72,6 @@
       function pump() {
         if (offset >= file.size && !pendingBuf && !sending) {
           try { dc.send(JSON.stringify({ type: 'file-done', id })); } catch {}
-=======
-      const reader = new FileReader();
-
-      function readNext() {
-        if (offset >= file.size) {
-          try { dc.send(JSON.stringify({ type: 'file-done', id })); } catch {}
-          // Finalize local UI
->>>>>>> 8f764e5555d5eaa95a43d9aa2417c58949ed2b1d
           const url = URL.createObjectURL(file);
           UI.renderFinalFile(wrap, {
             name: file.name,
@@ -92,7 +83,6 @@
           resolve();
           return;
         }
-<<<<<<< HEAD
         if (!reading && !pendingBuf && offset < file.size) {
           reading = true;
           const reader = readers[readerIdx];
@@ -126,24 +116,6 @@
       }
 
       pump();
-=======
-        const slice = file.slice(offset, offset + CHUNK_SIZE);
-        reader.onload = (ev) => {
-          sendBinaryWithPacing(dc, ev.target.result).then(() => {
-            offset += CHUNK_SIZE;
-            UI.updateFileProgress(wrap, Math.min(offset, file.size), file.size);
-            readNext();
-          });
-        };
-        reader.onerror = () => {
-          UI.appendSystem('文件读取失败');
-          resolve();
-        };
-        reader.readAsArrayBuffer(slice);
-      }
-
-      readNext();
->>>>>>> 8f764e5555d5eaa95a43d9aa2417c58949ed2b1d
     });
   }
 
