@@ -16,7 +16,11 @@
     autoScroll: true,
     receivingFile: null,
     sendingFiles: new Map(),
+<<<<<<< HEAD
     CHUNK_SIZE: 256 * 1024,
+=======
+    CHUNK_SIZE: 16 * 1024,
+>>>>>>> 8f764e5555d5eaa95a43d9aa2417c58949ed2b1d
   };
 
   function escapeHtml(s) {

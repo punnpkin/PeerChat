@@ -2,8 +2,13 @@
 
 > 一个基于 WebRTC 的 P2P 局域网直连聊天工具 —— 消息与文件直传，**全程不经过服务器**。
 
+<<<<<<< HEAD
 ![GitHub last commit](https://img.shields.io/github/last-commit/punnpkin/PeerChat)
 ![GitHub](https://img.shields.io/github/license/punnpkin/PeerChat)
+=======
+![GitHub last commit](https://img.shields.io/github/last-commit/your-name/PeerChat)
+![GitHub](https://img.shields.io/github/license/your-name/PeerChat)
+>>>>>>> 8f764e5555d5eaa95a43d9aa2417c58949ed2b1d
 
 ---
 
