@@ -250,6 +250,13 @@
     col.appendChild(head);
     col.appendChild(msgContainer);
 
+    if (isMe) {
+      // 自己的消息：头像在右，内容在左（视觉上内容靠右）
+      row.classList.add('flex-row-reverse');
+      col.classList.add('text-right');
+      head.classList.add('flex-row-reverse');
+      msgContainer.classList.add('text-right');
+    }
     row.appendChild(avatarWrap);
     row.appendChild(col);
     wrap.appendChild(row);
@@ -352,10 +359,12 @@
 
     const wrap = document.createElement('div');
     wrap.className = 'msg-body msg-file';
+    if (fromMe) wrap.dataset.fromMe = 'true';
 
     // A single compact rounded box: icon | filename + progress | percent
     const card = document.createElement('div');
     card.className = 'file-card flex items-center gap-3 border border-slate-200 rounded-xl bg-white/70 px-3 py-2 shadow-soft max-w-md min-w-0';
+    if (fromMe) card.classList.add('ml-auto');
     const iconSvg = isImage
       ? `<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`
       : `<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`;
@@ -392,6 +401,7 @@
 
   function renderFinalFile(wrap, { name, size, mimeType, isImage, url }) {
     if (!wrap) return;
+    const isFromMe = wrap.dataset.fromMe === 'true';
     wrap.innerHTML = '';
     wrap.classList.remove('msg-file');
 
@@ -401,6 +411,7 @@
       const img = document.createElement('img');
       img.src = url;
       img.className = 'msg-img max-w-[320px] sm:max-w-md max-h-96 rounded-lg cursor-zoom-in bg-slate-100';
+      if (isFromMe) img.classList.add('ml-auto');
       img.loading = 'lazy';
       img.addEventListener('click', () => openImgModal(url));
       img.addEventListener('load', () => maybeScrollToBottom(true));
@@ -408,6 +419,7 @@
 
       const info = document.createElement('div');
       info.className = 'file-card flex items-center gap-3 border border-slate-200 rounded-xl bg-white/70 px-3 py-2 shadow-soft max-w-md min-w-0 mt-1.5';
+      if (isFromMe) info.classList.add('ml-auto');
       info.innerHTML = `
         <div class="shrink-0 w-8 h-8 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500">
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
@@ -426,6 +438,7 @@
       // File: one compact rounded box — icon, filename + size (inline), download button.
       const card = document.createElement('div');
       card.className = 'file-card flex items-center gap-3 border border-slate-200 rounded-xl bg-white/70 px-3 py-2 shadow-soft max-w-md min-w-0';
+      if (isFromMe) card.classList.add('ml-auto');
       card.innerHTML = `
         <div class="shrink-0 w-8 h-8 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500">
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>

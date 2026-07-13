@@ -62,12 +62,16 @@
       try { dc.send(JSON.stringify(meta)); } catch { resolve(); return; }
 
       let offset = 0;
-      const reader = new FileReader();
+      let readerIdx = 0;
+      const readers = [new FileReader(), new FileReader()];
+      let pendingBuf = null;
+      let reading = false;
+      let sending = false;
+      let sent = 0;
 
-      function readNext() {
-        if (offset >= file.size) {
+      function pump() {
+        if (offset >= file.size && !pendingBuf && !sending) {
           try { dc.send(JSON.stringify({ type: 'file-done', id })); } catch {}
-          // Finalize local UI
           const url = URL.createObjectURL(file);
           UI.renderFinalFile(wrap, {
             name: file.name,
@@ -79,22 +83,39 @@
           resolve();
           return;
         }
-        const slice = file.slice(offset, offset + CHUNK_SIZE);
-        reader.onload = (ev) => {
-          sendBinaryWithPacing(dc, ev.target.result).then(() => {
-            offset += CHUNK_SIZE;
-            UI.updateFileProgress(wrap, Math.min(offset, file.size), file.size);
-            readNext();
+        if (!reading && !pendingBuf && offset < file.size) {
+          reading = true;
+          const reader = readers[readerIdx];
+          readerIdx = 1 - readerIdx;
+          const chunkSize = Math.min(CHUNK_SIZE, file.size - offset);
+          const slice = file.slice(offset, offset + chunkSize);
+          offset += chunkSize;
+          reader.onload = (ev) => {
+            reading = false;
+            pendingBuf = ev.target.result;
+            pump();
+          };
+          reader.onerror = () => {
+            reading = false;
+            UI.appendSystem('文件读取失败');
+            resolve();
+          };
+          reader.readAsArrayBuffer(slice);
+        }
+        if (!sending && pendingBuf) {
+          sending = true;
+          const buf = pendingBuf;
+          pendingBuf = null;
+          sendBinaryWithPacing(dc, buf).then(() => {
+            sending = false;
+            sent += buf.byteLength;
+            UI.updateFileProgress(wrap, sent, file.size);
+            pump();
           });
-        };
-        reader.onerror = () => {
-          UI.appendSystem('文件读取失败');
-          resolve();
-        };
-        reader.readAsArrayBuffer(slice);
+        }
       }
 
-      readNext();
+      pump();
     });
   }
 
