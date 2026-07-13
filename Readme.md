@@ -2,8 +2,8 @@
 
 > 一个基于 WebRTC 的 P2P 局域网直连聊天工具 —— 消息与文件直传，**全程不经过服务器**。
 
-![GitHub last commit](https://img.shields.io/github/last-commit/your-name/PeerChat)
-![GitHub](https://img.shields.io/github/license/your-name/PeerChat)
+![GitHub last commit](https://img.shields.io/github/last-commit/punnpkin/PeerChat)
+![GitHub](https://img.shields.io/github/license/punnpkin/PeerChat)
 
 ---
 
@@ -183,4 +183,3 @@ A：WebRTC 的 DataChannel 内置 DTLS-SRTP 加密，浏览器原生实现，
 **Q：文件存在哪？关了浏览器还能拿到吗？**
 A：纯浏览器内存。文件不会写到磁盘（发送方只读本地文件，接收方 Blob 于内存），
 关闭页面即释放。
-
